@@ -14,9 +14,12 @@
 #   ./digest.sh --since main        # a ref/tag/sha also works
 #   ./digest.sh --repo /path/to/repo
 #   ./digest.sh --dry-run           # build prompt only, don't call the API
+#   ./digest.sh --vault             # also write the digest into the Obsidian vault
+#   ./digest.sh --vault ~/notes     # ...into a custom vault dir
 #
 # Needs: git. For actual generation: ANTHROPIC_API_KEY + curl + jq.
 # Without a key (or with --dry-run) it writes the ready-to-paste prompt instead.
+# --vault only applies to a generated digest (API mode), not the prompt fallback.
 
 set -euo pipefail
 
@@ -25,6 +28,8 @@ SINCE=""
 DRY_RUN=0
 MODEL="${DIGEST_MODEL:-claude-opus-4-8}"
 OUT_DIR=""
+VAULT=0
+VAULT_DIR="${DIGEST_VAULT_DIR:-$HOME/Obsidian/vault-michel/06-GENERATED/digests}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -32,6 +37,10 @@ while [[ $# -gt 0 ]]; do
     --repo)    REPO="$2"; shift 2 ;;
     --model)   MODEL="$2"; shift 2 ;;
     --out)     OUT_DIR="$2"; shift 2 ;;
+    --vault)   VAULT=1
+               # optional dir arg: consume it only if it's not another flag
+               if [[ -n "${2:-}" && "$2" != --* ]]; then VAULT_DIR="$2"; shift; fi
+               shift ;;
     --dry-run) DRY_RUN=1; shift ;;
     -h|--help) grep '^#' "$0" | sed 's/^# \?//'; exit 0 ;;
     *) echo "unknown arg: $1" >&2; exit 2 ;;
@@ -123,6 +132,8 @@ if [[ $DRY_RUN -eq 1 || -z "${ANTHROPIC_API_KEY:-}" ]]; then
     echo ">> ANTHROPIC_API_KEY not set — wrote prompt instead of calling API." >&2
   echo ">> prompt: $PROMPT_FILE" >&2
   echo ">> paste it into Claude, or set ANTHROPIC_API_KEY to auto-generate." >&2
+  [[ $VAULT -eq 1 ]] && \
+    echo ">> --vault ignored: no digest generated (prompt-only mode)." >&2
   exit 0
 fi
 
@@ -158,3 +169,23 @@ fi
 git rev-parse HEAD > "$STAMP_FILE"
 
 echo ">> wrote $OUT_FILE" >&2
+
+# Optionally drop a copy into the Obsidian vault, with frontmatter so it's a
+# first-class note (tags/dataview) instead of a loose file.
+if [[ $VAULT -eq 1 ]]; then
+  mkdir -p "$VAULT_DIR"
+  VAULT_FILE="$VAULT_DIR/${REPO_NAME}_${TS}.md"
+  {
+    echo "---"
+    echo "title: Digest — $REPO_NAME"
+    echo "type: digest"
+    echo "repo: $REPO_NAME"
+    echo "range: \"$RANGE_DESC\""
+    echo "generated: $(date +%Y-%m-%d)"
+    echo "tags: [digest, comprehension-debt]"
+    echo "---"
+    echo
+    printf '%s\n' "$TEXT"
+  } > "$VAULT_FILE"
+  echo ">> vault: $VAULT_FILE" >&2
+fi

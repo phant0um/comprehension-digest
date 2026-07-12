@@ -23,7 +23,11 @@ Needs `git`. For auto-generation: `ANTHROPIC_API_KEY` + `curl` + `jq`.
 ./digest.sh --since v1.2.0     # any ref/tag/sha works too
 ./digest.sh --repo ~/code/app
 ./digest.sh --dry-run          # build prompt only, no API call
+./digest.sh --vault            # also copy the digest into your Obsidian vault
+./digest.sh --vault ~/notes    # ...into a custom vault dir
 ```
+
+`--vault` writes a second copy with Obsidian frontmatter (tags, dataview-friendly) to `06-GENERATED/digests/` by default. Override with the arg or `DIGEST_VAULT_DIR`. Applies to a generated digest only (API mode), not the prompt fallback.
 
 - With `ANTHROPIC_API_KEY` set → calls the API, writes `.digests/digest_<ts>.md`, and advances a watermark (`.digests/.last` = HEAD sha) so the next run is incremental.
 - Without a key (or with `--dry-run`) → writes `.digests/prompt_<ts>.md` for you to paste into Claude.
@@ -43,6 +47,7 @@ Quality of the digest tracks quality of your commit messages. Structured *What &
 | `ANTHROPIC_API_KEY` | — | enables auto-generation |
 | `DIGEST_MODEL` | `claude-opus-4-8` | override model |
 | `DIGEST_MAX_DIFF_LINES` | `4000` | cap diff size (log kept whole) |
+| `DIGEST_VAULT_DIR` | `~/Obsidian/vault-michel/06-GENERATED/digests` | `--vault` destination |
 
 ## Automate (weekly cron)
 

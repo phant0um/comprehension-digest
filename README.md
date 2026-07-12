@@ -25,7 +25,18 @@ Needs `git`. For auto-generation: `ANTHROPIC_API_KEY` + `curl` + `jq`.
 ./digest.sh --dry-run          # build prompt only, no API call
 ./digest.sh --vault            # also copy the digest into your Obsidian vault
 ./digest.sh --vault ~/notes    # ...into a custom vault dir
+./digest.sh --provider ollama  # generate locally via Ollama (no API key)
+./digest.sh --provider ollama --model qwen2.5-coder
 ```
+
+### Providers
+
+| Provider | Endpoint | Key | Default model |
+|---|---|---|---|
+| `anthropic` (default) | api.anthropic.com | `ANTHROPIC_API_KEY` (required) | `claude-opus-4-8` |
+| `ollama` | `OLLAMA_HOST`, default `localhost:11434` | none (`OLLAMA_API_KEY` optional) | `llama3.1` |
+
+Ollama uses the OpenAI-compatible `/v1/chat/completions` endpoint. Runs fully local — no key, no data leaving the machine. Small models degrade on big diffs; cap with `DIGEST_MAX_DIFF_LINES`.
 
 `--vault` writes a second copy with Obsidian frontmatter (tags, dataview-friendly) to `06-GENERATED/digests/` by default. Override with the arg or `DIGEST_VAULT_DIR`. Applies to a generated digest only (API mode), not the prompt fallback.
 
@@ -45,7 +56,9 @@ Quality of the digest tracks quality of your commit messages. Structured *What &
 | Env | Default | |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | — | enables auto-generation |
-| `DIGEST_MODEL` | `claude-opus-4-8` | override model |
+| `DIGEST_PROVIDER` | `anthropic` | `anthropic` or `ollama` |
+| `DIGEST_MODEL` | provider default | override model |
+| `OLLAMA_HOST` | `http://localhost:11434` | ollama endpoint |
 | `DIGEST_MAX_DIFF_LINES` | `4000` | cap diff size (log kept whole) |
 | `DIGEST_VAULT_DIR` | `~/Obsidian/vault-michel/06-GENERATED/digests` | `--vault` destination |
 
